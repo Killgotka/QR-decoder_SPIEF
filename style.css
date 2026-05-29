@@ -83,7 +83,6 @@ header {
   position: relative;
   display: flex;
   flex-direction: column;
-  align-items: center;
   justify-content: center;
   gap: 32px;
   padding-bottom: 16px;
@@ -93,6 +92,7 @@ header {
   display: flex;
   flex-direction: column;
   align-items: center;
+  align-self: center;
   text-align: center;
   gap: 12px;
 }
