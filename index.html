@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Проверка QR — Капсулы</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ── Scanner screen ──────────────────────────────────── -->
+  <div id="screen-scan" class="screen active">
+    <header>
+      <div class="logo">
+        <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
+          <rect x="2" y="2" width="12" height="12" rx="2" fill="currentColor"/>
+          <rect x="18" y="2" width="12" height="12" rx="2" fill="currentColor"/>
+          <rect x="2" y="18" width="12" height="12" rx="2" fill="currentColor"/>
+          <rect x="5" y="5" width="6" height="6" rx="1" fill="white"/>
+          <rect x="21" y="5" width="6" height="6" rx="1" fill="white"/>
+          <rect x="5" y="21" width="6" height="6" rx="1" fill="white"/>
+          <rect x="18" y="18" width="5" height="5" rx="1" fill="currentColor"/>
+          <rect x="25" y="18" width="5" height="5" rx="1" fill="currentColor"/>
+          <rect x="18" y="25" width="5" height="5" rx="1" fill="currentColor"/>
+          <rect x="25" y="25" width="5" height="5" rx="1" fill="currentColor"/>
+        </svg>
+        Проверка капсул
+      </div>
+      <span class="badge">SPIEF 2026</span>
+    </header>
+
+    <!-- Idle -->
+    <div id="scan-idle" class="scan-idle">
+      <div class="scan-icon">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+          <path d="M23 7V1h-6M1 7V1h6M23 17v6h-6M1 17v6h6"/>
+          <rect x="6" y="6" width="5" height="5" rx="0.5" fill="currentColor" stroke="none"/>
+          <rect x="13" y="6" width="5" height="5" rx="0.5" fill="currentColor" stroke="none"/>
+          <rect x="6" y="13" width="5" height="5" rx="0.5" fill="currentColor" stroke="none"/>
+          <rect x="13" y="13" width="5" height="5" rx="0.5" fill="currentColor" stroke="none"/>
+        </svg>
+      </div>
+      <p class="scan-hint">Отсканируйте QR-код капсулы</p>
+      <button class="primary-btn" id="btn-open-camera">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
+        Открыть камеру
+      </button>
+      <button class="secondary-btn" id="btn-open-photo">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <path d="M3 9h18M9 21V9"/>
+        </svg>
+        Выбрать фото
+      </button>
+      <input type="file" id="photo-input" accept="image/*" capture="environment" style="display:none" />
+    </div>
+
+    <!-- Active camera -->
+    <div id="scan-active" style="display:none">
+      <div class="viewfinder">
+        <video id="scan-video" playsinline muted autoplay></video>
+        <div class="vf-overlay">
+          <div class="vf-frame">
+            <span class="c c-tl"></span>
+            <span class="c c-tr"></span>
+            <span class="c c-bl"></span>
+            <span class="c c-br"></span>
+            <div class="laser"></div>
+          </div>
+        </div>
+      </div>
+      <button class="stop-btn" id="btn-stop">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+        Остановить
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Result screen ────────────────────────────────────── -->
+  <div id="screen-result" class="screen">
+
+    <!-- Status banner -->
+    <div class="status-banner" id="status-banner">
+      <div class="status-icon" id="status-icon"></div>
+      <div class="status-text" id="status-text"></div>
+      <div class="status-sub" id="status-sub"></div>
+    </div>
+
+    <!-- Capsule info -->
+    <div class="info-card" id="info-card">
+      <div class="info-row">
+        <span class="info-label">Капсула</span>
+        <span class="info-value big" id="r-capsule">—</span>
+      </div>
+      <div class="info-divider"></div>
+      <div class="info-row">
+        <span class="info-label">Начало</span>
+        <span class="info-value" id="r-start">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Конец</span>
+        <span class="info-value" id="r-end">—</span>
+      </div>
+      <div class="info-row" id="r-ext-row" style="display:none">
+        <span class="info-label">Тип</span>
+        <span class="info-value"><span class="tag-ext">Продление</span></span>
+      </div>
+      <div class="info-row debug-row">
+        <span class="info-label">UTC</span>
+        <span class="info-value debug-val" id="r-debug">—</span>
+      </div>
+    </div>
+
+    <button class="primary-btn" id="btn-scan-again">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="1 4 1 10 7 10"/>
+        <path d="M3.51 15a9 9 0 1 0 .49-3.5"/>
+      </svg>
+      Сканировать ещё
+    </button>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
