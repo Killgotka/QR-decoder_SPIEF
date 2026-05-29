@@ -1,7 +1,14 @@
 'use strict';
 
-const SALT = 'spief-2026';
+const SALT        = 'spief-2026';
 const SESSION_MIN = 25;
+const TIMEZONE_KEY = 'qr_tz_offset';
+
+// ── Timezone helpers ──────────────────────────────────────────────
+function getTzOffset() {
+  const v = localStorage.getItem(TIMEZONE_KEY);
+  return v !== null ? parseInt(v, 10) : null;
+}
 
 // ── Decode (mirrors QRValidator.cs) ──────────────────────────────
 function decode(qrText) {
@@ -36,9 +43,10 @@ function decode(qrText) {
 }
 
 // ── Format helpers ────────────────────────────────────────────────
-function fmt(d) {
+function fmt(d, tzOffset = 0) {
   const p = n => String(n).padStart(2, '0');
-  return `${p(d.getDate())}.${p(d.getMonth()+1)}.${d.getFullYear()}, ${p(d.getHours())}:${p(d.getMinutes())}`;
+  const shifted = new Date(d.getTime() + tzOffset * 3_600_000);
+  return `${p(shifted.getUTCDate())}.${p(shifted.getUTCMonth()+1)}.${shifted.getUTCFullYear()}, ${p(shifted.getUTCHours())}:${p(shifted.getUTCMinutes())}`;
 }
 
 function fmtRemaining(ms) {
@@ -64,6 +72,7 @@ function showResult(qrText) {
   const { capsuleId, isExtension, startTime, unixTs } = data;
   const endTime = new Date(startTime.getTime() + SESSION_MIN * 60000);
   const now     = new Date();
+  const tz      = getTzOffset() ?? 0;
 
   const banner      = document.getElementById('status-banner');
   const icon        = document.getElementById('status-icon');
@@ -118,8 +127,8 @@ function showResult(qrText) {
 
   // Info
   document.getElementById('r-capsule').textContent = `№ ${capsuleId}`;
-  document.getElementById('r-start').textContent   = fmt(startTime);
-  document.getElementById('r-end').textContent     = fmt(endTime);
+  document.getElementById('r-start').textContent   = fmt(startTime, tz);
+  document.getElementById('r-end').textContent     = fmt(endTime,   tz);
   document.getElementById('r-ext-row').style.display = isExtension ? 'flex' : 'none';
 
   // Debug (hidden by default; reset toggle state)
@@ -237,7 +246,7 @@ document.getElementById('photo-input').addEventListener('change', async e => {
   else toast('QR-код не найден на фото');
 });
 
-// ── Buttons ───────────────────────────────────────────────────────
+// ── Scan buttons ──────────────────────────────────────────────────
 document.getElementById('btn-open-camera').addEventListener('click', startCamera);
 document.getElementById('btn-stop').addEventListener('click', stopCamera);
 
@@ -253,8 +262,8 @@ document.getElementById('btn-back-idle').addEventListener('click', () => {
 });
 
 document.getElementById('debug-toggle').addEventListener('click', () => {
-  const row    = document.getElementById('debug-row');
-  const label  = document.getElementById('debug-toggle-label');
+  const row   = document.getElementById('debug-row');
+  const label = document.getElementById('debug-toggle-label');
   const hidden = row.style.display === 'none';
   row.style.display = hidden ? 'flex' : 'none';
   label.textContent = hidden ? 'Скрыть' : 'Тех. информация';
@@ -268,3 +277,62 @@ function toast(msg) {
   clearTimeout(el._t);
   el._t = setTimeout(() => el.classList.remove('show'), 3000);
 }
+
+// ── Timezone settings ─────────────────────────────────────────────
+const TIMEZONES = [
+  { label: 'UTC+2 — Калининград',   offset: 2  },
+  { label: 'UTC+3 — Москва',        offset: 3  },
+  { label: 'UTC+4 — Самара',        offset: 4  },
+  { label: 'UTC+5 — Екатеринбург',  offset: 5  },
+  { label: 'UTC+6 — Омск',          offset: 6  },
+  { label: 'UTC+7 — Красноярск',    offset: 7  },
+  { label: 'UTC+8 — Иркутск',       offset: 8  },
+  { label: 'UTC+9 — Якутск / Чита', offset: 9  },
+  { label: 'UTC+10 — Владивосток',  offset: 10 },
+  { label: 'UTC+11 — Магадан',      offset: 11 },
+  { label: 'UTC+12 — Камчатка',     offset: 12 },
+];
+
+function buildTzList() {
+  const list    = document.getElementById('tz-list');
+  const current = getTzOffset();
+  list.innerHTML = TIMEZONES.map(tz => `
+    <li class="tz-item${tz.offset === current ? ' active' : ''}" data-offset="${tz.offset}">
+      <span>${tz.label}</span>
+      ${tz.offset === current
+        ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>'
+        : ''}
+    </li>
+  `).join('');
+  list.querySelectorAll('.tz-item').forEach(item => {
+    item.addEventListener('click', () => {
+      localStorage.setItem(TIMEZONE_KEY, item.dataset.offset);
+      updateTzIndicator();
+      closeSettings();
+    });
+  });
+}
+
+function updateTzIndicator() {
+  const tz = getTzOffset();
+  document.getElementById('tz-indicator').textContent = tz !== null ? `UTC+${tz}` : 'UTC?';
+}
+
+function openSettings() {
+  buildTzList();
+  document.getElementById('settings-modal').style.display = 'flex';
+}
+
+function closeSettings() {
+  document.getElementById('settings-modal').style.display = 'none';
+}
+
+document.getElementById('btn-settings').addEventListener('click', openSettings);
+document.getElementById('btn-settings-close').addEventListener('click', closeSettings);
+document.getElementById('settings-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('settings-modal')) closeSettings();
+});
+
+// ── Init ──────────────────────────────────────────────────────────
+updateTzIndicator();
+if (getTzOffset() === null) openSettings();
