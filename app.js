@@ -36,9 +36,15 @@ function decode(qrText) {
 }
 
 // ── Format helpers ────────────────────────────────────────────────
+// QR-коды генерируются сервером в Чите (UTC+9).
+// Отображаем время в том же смещении, чтобы показывать
+// «серверное» время вне зависимости от часового пояса клиента.
+const SERVER_UTC_OFFSET = 9;
+
 function fmt(d) {
   const p = n => String(n).padStart(2, '0');
-  return `${p(d.getDate())}.${p(d.getMonth()+1)}.${d.getFullYear()}, ${p(d.getHours())}:${p(d.getMinutes())}`;
+  const shifted = new Date(d.getTime() + SERVER_UTC_OFFSET * 3_600_000);
+  return `${p(shifted.getUTCDate())}.${p(shifted.getUTCMonth()+1)}.${shifted.getUTCFullYear()}, ${p(shifted.getUTCHours())}:${p(shifted.getUTCMinutes())}`;
 }
 
 function fmtRemaining(ms) {
